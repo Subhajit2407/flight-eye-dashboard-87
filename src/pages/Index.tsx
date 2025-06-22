@@ -5,7 +5,7 @@ import MetricCard from '../components/MetricCard';
 import AlertsChart from '../components/AlertsChart';
 import BugReportChart from '../components/BugReportChart';
 import CategoryBreakdown from '../components/CategoryBreakdown';
-import GlobalMap from '../components/GlobalMap';
+import RealGlobalMap from '../components/RealGlobalMap';
 import FilterPanel from '../components/FilterPanel';
 import BugList from '../components/BugList';
 import AircraftEntryForm from '../components/AircraftEntryForm';
@@ -72,7 +72,7 @@ const Index = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <CategoryBreakdown />
               <div className="lg:col-span-2">
-                <GlobalMap />
+                <RealGlobalMap />
               </div>
             </div>
           </div>
@@ -183,10 +183,10 @@ const Index = () => {
         return (
           <div className="space-y-6">
             <div className="aviation-card p-6">
-              <h3 className="text-xl font-semibold mb-4">Global System Monitoring</h3>
-              <p className="text-muted-foreground">Worldwide view of aircraft system status and incidents.</p>
+              <h3 className="text-xl font-semibold mb-4">Live Global Flight Monitoring</h3>
+              <p className="text-muted-foreground">Real-time tracking of aircraft worldwide with live data from OpenSky Network.</p>
             </div>
-            <GlobalMap />
+            <RealGlobalMap />
           </div>
         );
       
