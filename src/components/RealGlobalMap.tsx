@@ -31,6 +31,7 @@ interface ProcessedFlight {
   velocity: number;
   status: 'normal' | 'warning' | 'critical';
   lastContact: Date;
+  heading: number; // Added heading property
 }
 
 const RealGlobalMap: React.FC = () => {
@@ -64,6 +65,7 @@ const RealGlobalMap: React.FC = () => {
           const velocity = state[9] || 0;
           const altitude = state[7] || 0;
           const lastContact = state[4] || 0;
+          const heading = state[10] || 0; // true_track from API
           
           // Simulate status based on velocity and altitude
           let status: 'normal' | 'warning' | 'critical' = 'normal';
@@ -79,7 +81,8 @@ const RealGlobalMap: React.FC = () => {
             altitude: Math.round(altitude * 3.281), // Convert to feet
             velocity: Math.round(velocity * 1.944), // Convert to knots
             status,
-            lastContact: new Date(lastContact * 1000)
+            lastContact: new Date(lastContact * 1000),
+            heading: heading || Math.random() * 360 // Use API heading or random if null
           };
         }) || [];
 
@@ -175,7 +178,7 @@ const RealGlobalMap: React.FC = () => {
             {/* Transparent World Map SVG */}
             <svg viewBox="0 0 1000 500" className="absolute inset-0 w-full h-full opacity-30 z-10">
               {/* World Map Continents */}
-              <g fill="currentColor" className="text-blue-400/40" stroke="currentColor" strokeWidth="0.5" className="text-blue-300/60">
+              <g fill="currentColor" stroke="currentColor" strokeWidth="0.5" className="text-blue-400/40">
                 {/* North America */}
                 <path d="M120 100 C150 80, 200 85, 240 100 L250 120 C260 140, 270 160, 260 180 L240 200 C220 210, 200 205, 180 200 L160 180 C140 160, 130 140, 120 120 Z" />
                 {/* South America */}
@@ -229,7 +232,7 @@ const RealGlobalMap: React.FC = () => {
                 <div className="relative group">
                   {/* Flight marker with enhanced visibility */}
                   <div className={`w-6 h-6 rounded-full ${getStatusColor(flight.status)} flex items-center justify-center shadow-lg border-2 border-white/30 backdrop-blur-sm`}>
-                    <Plane className="w-3 h-3 text-white drop-shadow-sm" style={{ transform: `rotate(${flight.true_track || Math.random() * 360}deg)` }} />
+                    <Plane className="w-3 h-3 text-white drop-shadow-sm" style={{ transform: `rotate(${flight.heading}deg)` }} />
                   </div>
                   
                   {/* Enhanced hover tooltip */}
