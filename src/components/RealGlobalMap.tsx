@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, AlertTriangle, Plane, Wifi, WifiOff } from 'lucide-react';
 
@@ -173,17 +172,54 @@ const RealGlobalMap: React.FC = () => {
         <>
           {/* World Map with Real Flight Data */}
           <div className="relative h-96 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-lg overflow-hidden border border-border/20">
-            {/* Simple world map background */}
-            <svg viewBox="0 0 1000 500" className="absolute inset-0 w-full h-full opacity-20">
-              <path d="M158 206c9-1 24-6 32-5 23 3 46 9 69 7 15-1 30-7 45-6 42 4 84 19 126 18 28-1 56-8 84-6 35 3 70 14 105 13 25-1 50-6 75-4 38 3 76 12 114 11 23-1 46-5 69-3 29 2 58 8 87 7 21-1 42-4 63-2 27 2 54 7 81 6 19-1 38-3 57-1 24 2 48 6 72 5 17-1 34-2 51 0 21 2 42 5 63 4 15-1 30-2 45 0 19 2 38 5 57 4 13-1 26-1 39 1 16 2 32 5 48 4 11-1 22-1 33 1 13 2 26 4 39 3 9-1 18-1 27 1 11 2 22 4 33 3 7-1 14-1 21 1 8 2 16 4 24 3 5-1 10-1 15 1 6 2 12 4 18 3 4-1 8-1 12 1 5 2 10 4 15 3 3-1 6-1 9 1 4 2 8 4 12 3 2-1 4-1 6 1 3 2 6 4 9 3 1-1 2-1 3 1 2 2 4 4 6 3 1-1 1-1 2 1 1 2 2 4 3 3 0-1 0-1 1 1 1 2 1 4 2 3" 
-                    fill="currentColor" className="text-blue-500/30" />
+            {/* Transparent World Map SVG */}
+            <svg viewBox="0 0 1000 500" className="absolute inset-0 w-full h-full opacity-30 z-10">
+              {/* World Map Continents */}
+              <g fill="currentColor" className="text-blue-400/40" stroke="currentColor" strokeWidth="0.5" className="text-blue-300/60">
+                {/* North America */}
+                <path d="M120 100 C150 80, 200 85, 240 100 L250 120 C260 140, 270 160, 260 180 L240 200 C220 210, 200 205, 180 200 L160 180 C140 160, 130 140, 120 120 Z" />
+                {/* South America */}
+                <path d="M180 220 C200 210, 220 215, 230 235 L235 280 C240 320, 235 360, 220 380 L200 390 C180 385, 170 370, 175 350 L180 300 C175 270, 175 245, 180 220 Z" />
+                {/* Europe */}
+                <path d="M400 80 C430 75, 460 80, 480 95 L485 110 C490 125, 485 140, 475 150 L450 155 C430 150, 410 145, 405 130 L400 115 C395 100, 395 90, 400 80 Z" />
+                {/* Africa */}
+                <path d="M420 160 C450 155, 480 160, 500 180 L510 220 C515 260, 510 300, 495 340 L480 360 C460 365, 440 360, 430 340 L425 300 C420 260, 420 220, 420 180 Z" />
+                {/* Asia */}
+                <path d="M520 70 C580 65, 640 70, 700 85 L750 100 C780 115, 800 140, 795 165 L785 185 C770 200, 750 195, 730 190 L680 180 C640 175, 600 170, 560 165 L530 150 C510 135, 515 105, 520 70 Z" />
+                {/* Australia */}
+                <path d="M650 320 C680 315, 710 320, 730 335 L735 350 C740 365, 735 380, 725 385 L700 390 C680 385, 660 380, 655 365 L650 350 C645 335, 645 327, 650 320 Z" />
+                {/* Additional landmasses for better coverage */}
+                <path d="M300 90 C320 85, 340 90, 350 105 L345 120 C340 135, 325 140, 310 135 L300 120 C295 105, 295 95, 300 90 Z" />
+              </g>
+              
+              {/* Grid lines for better map appearance */}
+              <defs>
+                <pattern id="grid" width="50" height="25" patternUnits="userSpaceOnUse">
+                  <path d="M 50 0 L 0 0 0 25" fill="none" stroke="currentColor" strokeWidth="0.3" className="text-blue-300/20"/>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#grid)" />
+              
+              {/* Latitude lines */}
+              <g stroke="currentColor" strokeWidth="0.3" className="text-blue-300/20">
+                <line x1="0" y1="125" x2="1000" y2="125" />
+                <line x1="0" y1="250" x2="1000" y2="250" />
+                <line x1="0" y1="375" x2="1000" y2="375" />
+              </g>
+              
+              {/* Longitude lines */}
+              <g stroke="currentColor" strokeWidth="0.3" className="text-blue-300/20">
+                <line x1="250" y1="0" x2="250" y2="500" />
+                <line x1="500" y1="0" x2="500" y2="500" />
+                <line x1="750" y1="0" x2="750" y2="500" />
+              </g>
             </svg>
 
-            {/* Real flight markers */}
+            {/* Real flight markers - positioned above the map */}
             {flights.map((flight, index) => (
               <div
                 key={flight.id}
-                className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10"
+                className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-20"
                 style={{
                   left: `${((flight.lng + 180) / 360) * 100}%`,
                   top: `${((90 - flight.lat) / 180) * 100}%`,
@@ -191,46 +227,60 @@ const RealGlobalMap: React.FC = () => {
                 onClick={() => setSelectedFlight(flight)}
               >
                 <div className="relative group">
-                  <div className={`w-4 h-4 rounded-full ${getStatusColor(flight.status)} flex items-center justify-center shadow-lg`}>
-                    <Plane className="w-2 h-2 text-white" style={{ transform: `rotate(${Math.random() * 360}deg)` }} />
+                  {/* Flight marker with enhanced visibility */}
+                  <div className={`w-6 h-6 rounded-full ${getStatusColor(flight.status)} flex items-center justify-center shadow-lg border-2 border-white/30 backdrop-blur-sm`}>
+                    <Plane className="w-3 h-3 text-white drop-shadow-sm" style={{ transform: `rotate(${flight.true_track || Math.random() * 360}deg)` }} />
                   </div>
-                  <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                    <div className="bg-gray-900 px-3 py-2 rounded-lg text-xs whitespace-nowrap border border-gray-700 shadow-xl">
-                      <div className="font-medium text-white">{flight.callsign}</div>
+                  
+                  {/* Enhanced hover tooltip */}
+                  <div className="absolute -top-20 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 z-30">
+                    <div className="bg-gray-900/95 backdrop-blur-sm px-4 py-3 rounded-lg text-xs whitespace-nowrap border border-gray-600/50 shadow-xl">
+                      <div className="font-semibold text-white text-sm">{flight.callsign}</div>
                       <div className="text-gray-300">{flight.country}</div>
-                      <div className="text-gray-300">{flight.altitude}ft • {flight.velocity}kts</div>
+                      <div className="text-gray-300 mt-1">{flight.altitude}ft • {flight.velocity}kts</div>
+                      <div className={`text-xs mt-1 font-medium ${getStatusTextColor(flight.status)}`}>
+                        Status: {flight.status.toUpperCase()}
+                      </div>
                     </div>
                   </div>
-                  <div className={`absolute inset-0 rounded-full ${getStatusColor(flight.status)} opacity-30 animate-ping`}></div>
+                  
+                  {/* Animated pulse effect */}
+                  <div className={`absolute inset-0 rounded-full ${getStatusColor(flight.status)} opacity-20 animate-ping`}></div>
+                  
+                  {/* Flight trail effect */}
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-1 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-60 -rotate-45"></div>
                 </div>
               </div>
             ))}
 
-            {/* Legend */}
-            <div className="absolute bottom-4 left-4 bg-black/70 rounded-lg p-4 backdrop-blur-sm border border-gray-700">
-              <div className="text-xs font-medium text-white mb-3">Flight Status</div>
+            {/* Enhanced legend with better positioning */}
+            <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-md rounded-lg p-4 border border-gray-600/30 z-15">
+              <div className="text-sm font-semibold text-white mb-3">Flight Status</div>
               <div className="space-y-2">
                 {[
                   { status: 'normal', label: 'Normal', count: flights.filter(f => f.status === 'normal').length },
                   { status: 'warning', label: 'Warning', count: flights.filter(f => f.status === 'warning').length },
                   { status: 'critical', label: 'Critical', count: flights.filter(f => f.status === 'critical').length }
                 ].map(({ status, label, count }) => (
-                  <div key={status} className="flex items-center justify-between space-x-3">
+                  <div key={status} className="flex items-center justify-between space-x-4">
                     <div className="flex items-center space-x-2">
-                      <div className={`w-3 h-3 ${getStatusColor(status)} rounded-full`}></div>
-                      <span className="text-xs text-gray-300">{label}</span>
+                      <div className={`w-4 h-4 ${getStatusColor(status)} rounded-full border border-white/30`}></div>
+                      <span className="text-sm text-gray-200">{label}</span>
                     </div>
-                    <span className="text-xs text-white font-medium">{count}</span>
+                    <span className="text-sm text-white font-semibold bg-gray-700/50 px-2 py-1 rounded">{count}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Data source info */}
-            <div className="absolute top-4 right-4 bg-black/70 rounded-lg p-3 backdrop-blur-sm border border-gray-700">
+            {/* Enhanced data source info */}
+            <div className="absolute top-4 right-4 bg-black/80 backdrop-blur-md rounded-lg p-3 border border-gray-600/30 z-15">
               <div className="text-xs text-gray-300 mb-1">Data Source</div>
-              <div className="text-xs font-medium text-white">OpenSky Network</div>
-              <div className="text-xs text-green-400">Live Updates</div>
+              <div className="text-sm font-semibold text-white">OpenSky Network</div>
+              <div className="text-xs text-green-400 flex items-center space-x-1">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span>Live Updates</span>
+              </div>
             </div>
           </div>
 
