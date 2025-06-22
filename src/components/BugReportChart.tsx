@@ -3,19 +3,33 @@ import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Area, AreaChart } from 'recharts';
 
 const BugReportChart: React.FC = () => {
-  const data = [
-    { date: 'Jan', uncategorized: 45, categorized: 78, resolved: 120 },
-    { date: 'Feb', uncategorized: 52, categorized: 85, resolved: 142 },
-    { date: 'Mar', uncategorized: 38, categorized: 92, resolved: 158 },
-    { date: 'Apr', uncategorized: 41, categorized: 76, resolved: 165 },
-    { date: 'May', uncategorized: 48, categorized: 83, resolved: 187 },
-    { date: 'Jun', uncategorized: 35, categorized: 89, resolved: 203 },
-  ];
+  // Generate more realistic trending data
+  const generateRealisticTrendData = () => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    return months.map((month, index) => {
+      const baseResolved = 120 + (index * 25) + Math.floor(Math.random() * 20);
+      const baseCategorized = 60 + (index * 8) + Math.floor(Math.random() * 15);
+      const baseUncategorized = Math.max(5, 50 - (index * 5) + Math.floor(Math.random() * 10));
+      
+      return {
+        date: month,
+        uncategorized: baseUncategorized,
+        categorized: baseCategorized,
+        resolved: baseResolved,
+        total: baseUncategorized + baseCategorized + baseResolved
+      };
+    });
+  };
+
+  const data = generateRealisticTrendData();
 
   return (
     <div className="aviation-card p-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-foreground">Bug Report Trends</h3>
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">Issue Resolution Trends</h3>
+          <p className="text-sm text-muted-foreground">Monthly progress in issue management and resolution</p>
+        </div>
         <div className="flex items-center space-x-4 text-xs">
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-red-400 rounded-full"></div>
@@ -23,7 +37,7 @@ const BugReportChart: React.FC = () => {
           </div>
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
-            <span>Categorized</span>
+            <span>In Progress</span>
           </div>
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-green-400 rounded-full"></div>
@@ -44,12 +58,37 @@ const BugReportChart: React.FC = () => {
                 border: '1px solid #374151',
                 borderRadius: '8px'
               }}
+              formatter={(value, name) => [value, name.charAt(0).toUpperCase() + name.slice(1)]}
             />
-            <Area type="monotone" dataKey="resolved" stackId="1" stroke="#10B981" fill="#10B981" fillOpacity={0.3} />
-            <Area type="monotone" dataKey="categorized" stackId="1" stroke="#EAB308" fill="#EAB308" fillOpacity={0.3} />
-            <Area type="monotone" dataKey="uncategorized" stackId="1" stroke="#EF4444" fill="#EF4444" fillOpacity={0.3} />
+            <Area type="monotone" dataKey="resolved" stackId="1" stroke="#10B981" fill="#10B981" fillOpacity={0.4} />
+            <Area type="monotone" dataKey="categorized" stackId="1" stroke="#EAB308" fill="#EAB308" fillOpacity={0.4} />
+            <Area type="monotone" dataKey="uncategorized" stackId="1" stroke="#EF4444" fill="#EF4444" fillOpacity={0.4} />
           </AreaChart>
         </ResponsiveContainer>
+      </div>
+
+      <div className="mt-4 grid grid-cols-3 gap-4">
+        <div className="text-center p-3 bg-green-500/10 rounded-lg">
+          <div className="text-xl font-bold text-green-400">{data[data.length - 1].resolved}</div>
+          <div className="text-xs text-muted-foreground">Resolved This Month</div>
+          <div className="text-xs text-green-400 mt-1">
+            +{data[data.length - 1].resolved - data[data.length - 2].resolved} from last month
+          </div>
+        </div>
+        <div className="text-center p-3 bg-yellow-500/10 rounded-lg">
+          <div className="text-xl font-bold text-yellow-400">{data[data.length - 1].categorized}</div>
+          <div className="text-xs text-muted-foreground">In Progress</div>
+          <div className="text-xs text-yellow-400 mt-1">
+            Processing queue
+          </div>
+        </div>
+        <div className="text-center p-3 bg-red-500/10 rounded-lg">
+          <div className="text-xl font-bold text-red-400">{data[data.length - 1].uncategorized}</div>
+          <div className="text-xs text-muted-foreground">Awaiting Review</div>
+          <div className="text-xs text-red-400 mt-1">
+            Requires attention
+          </div>
+        </div>
       </div>
     </div>
   );
