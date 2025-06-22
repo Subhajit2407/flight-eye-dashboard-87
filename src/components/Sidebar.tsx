@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Gauge, 
@@ -9,7 +8,9 @@ import {
   Layers,
   Shield,
   Activity,
-  Map
+  Map,
+  Plane,
+  ClipboardList
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -20,12 +21,14 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Gauge },
+    { id: 'aircraft-entry', label: 'Aircraft Entry', icon: Plane },
+    { id: 'bug-reporting', label: 'Bug Reporting', icon: ClipboardList },
+    { id: 'reports', label: 'Reports & PDF', icon: FileText },
     { id: 'alerts', label: 'Detection Alerts', icon: AlertTriangle },
-    { id: 'bugs', label: 'Bug Reports', icon: Bug },
+    { id: 'bugs', label: 'Legacy Bugs', icon: Bug },
     { id: 'subsystems', label: 'Subsystems', icon: Layers },
     { id: 'map', label: 'Global View', icon: Map },
     { id: 'history', label: 'Error History', icon: Activity },
-    { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 

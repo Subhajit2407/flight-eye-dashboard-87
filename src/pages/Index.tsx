@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
@@ -9,13 +8,18 @@ import CategoryBreakdown from '../components/CategoryBreakdown';
 import GlobalMap from '../components/GlobalMap';
 import FilterPanel from '../components/FilterPanel';
 import BugList from '../components/BugList';
+import AircraftEntryForm from '../components/AircraftEntryForm';
+import EnhancedBugReportForm from '../components/EnhancedBugReportForm';
+import ReportsPage from '../components/ReportsPage';
 import { useBugManager } from '../hooks/useBugManager';
+import { useAircraftManager } from '../hooks/useAircraftManager';
 import { Filter, Download, RefreshCw, Plus, Trash2 } from 'lucide-react';
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const { bugs, allBugs, filter, setFilter, addRandomBug, clearAllBugs, resolveBug } = useBugManager();
+  const { aircraft, bugs: enhancedBugs } = useAircraftManager();
 
   const renderMainContent = () => {
     switch (activeSection) {
@@ -34,23 +38,23 @@ const Index = () => {
               />
               <MetricCard 
                 title="Critical Issues" 
-                value={allBugs.filter(b => b.severity === 'Critical' && b.status !== 'Resolved').length.toString()} 
+                value={enhancedBugs.filter(b => b.severity === 'Critical' && b.status !== 'Resolved').length.toString()} 
                 change={-15}
                 changeType="decrease"
                 severity="critical"
-                subtitle={`Resolved: ${allBugs.filter(b => b.severity === 'Critical' && b.status === 'Resolved').length}`}
+                subtitle={`Resolved: ${enhancedBugs.filter(b => b.severity === 'Critical' && b.status === 'Resolved').length}`}
               />
               <MetricCard 
-                title="System Uptime" 
-                value="99.97%" 
-                change={0.03}
+                title="Registered Aircraft" 
+                value={aircraft.length.toString()} 
+                change={8}
                 changeType="increase"
                 severity="low"
-                subtitle="30-day average"
+                subtitle="Total registered"
               />
               <MetricCard 
                 title="Bug Reports" 
-                value={allBugs.length.toString()} 
+                value={enhancedBugs.length.toString()} 
                 change={8}
                 changeType="increase"
                 severity="medium"
@@ -74,14 +78,31 @@ const Index = () => {
           </div>
         );
       
+      case 'aircraft-entry':
+        return (
+          <div className="space-y-6">
+            <AircraftEntryForm />
+          </div>
+        );
+        
+      case 'bug-reporting':
+        return (
+          <div className="space-y-6">
+            <EnhancedBugReportForm />
+          </div>
+        );
+        
+      case 'reports':
+        return <ReportsPage />;
+      
       case 'bugs':
         return (
           <div className="space-y-6">
             <div className="aviation-card p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-xl font-semibold mb-2">Bug Report Management</h3>
-                  <p className="text-muted-foreground">Comprehensive bug tracking and resolution management.</p>
+                  <h3 className="text-xl font-semibold mb-2">Legacy Bug Report Management</h3>
+                  <p className="text-muted-foreground">Simple bug tracking and resolution management.</p>
                 </div>
                 <div className="flex items-center space-x-3">
                   <button
@@ -179,6 +200,16 @@ const Index = () => {
     }
   };
 
+  const getSectionTitle = () => {
+    switch (activeSection) {
+      case 'dashboard': return 'System Overview';
+      case 'aircraft-entry': return 'Aircraft Registration';
+      case 'bug-reporting': return 'Bug Reporting';
+      case 'reports': return 'Reports & Analytics';
+      default: return activeSection.replace('-', ' ');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-aviation-darker flex w-full">
       <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
@@ -191,7 +222,7 @@ const Index = () => {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-4">
               <h1 className="text-2xl font-bold text-foreground capitalize">
-                {activeSection === 'dashboard' ? 'System Overview' : activeSection.replace('-', ' ')}
+                {getSectionTitle()}
               </h1>
               <button className="p-2 hover:bg-accent rounded-lg transition-colors">
                 <RefreshCw className="w-4 h-4 text-muted-foreground" />
