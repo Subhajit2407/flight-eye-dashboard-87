@@ -8,11 +8,14 @@ import BugReportChart from '../components/BugReportChart';
 import CategoryBreakdown from '../components/CategoryBreakdown';
 import GlobalMap from '../components/GlobalMap';
 import FilterPanel from '../components/FilterPanel';
-import { Filter, Download, RefreshCw } from 'lucide-react';
+import BugList from '../components/BugList';
+import { useBugManager } from '../hooks/useBugManager';
+import { Filter, Download, RefreshCw, Plus, Trash2 } from 'lucide-react';
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const { bugs, allBugs, filter, setFilter, addRandomBug, clearAllBugs, resolveBug } = useBugManager();
 
   const renderMainContent = () => {
     switch (activeSection) {
@@ -31,11 +34,11 @@ const Index = () => {
               />
               <MetricCard 
                 title="Critical Issues" 
-                value="23" 
+                value={allBugs.filter(b => b.severity === 'Critical' && b.status !== 'Resolved').length.toString()} 
                 change={-15}
                 changeType="decrease"
                 severity="critical"
-                subtitle="Resolved: 8"
+                subtitle={`Resolved: ${allBugs.filter(b => b.severity === 'Critical' && b.status === 'Resolved').length}`}
               />
               <MetricCard 
                 title="System Uptime" 
@@ -47,11 +50,11 @@ const Index = () => {
               />
               <MetricCard 
                 title="Bug Reports" 
-                value="156" 
+                value={allBugs.length.toString()} 
                 change={8}
                 changeType="increase"
                 severity="medium"
-                subtitle="This week"
+                subtitle="Total reported"
               />
             </div>
             
@@ -71,6 +74,79 @@ const Index = () => {
           </div>
         );
       
+      case 'bugs':
+        return (
+          <div className="space-y-6">
+            <div className="aviation-card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">Bug Report Management</h3>
+                  <p className="text-muted-foreground">Comprehensive bug tracking and resolution management.</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={addRandomBug}
+                    className="flex items-center space-x-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Bug</span>
+                  </button>
+                  <button
+                    onClick={clearAllBugs}
+                    className="flex items-center space-x-2 px-4 py-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Clear All</span>
+                  </button>
+                </div>
+              </div>
+              
+              {/* Filter Controls */}
+              <div className="flex flex-wrap gap-3 mb-6">
+                <select
+                  value={filter.severity || ''}
+                  onChange={(e) => setFilter(prev => ({ ...prev, severity: e.target.value as any || undefined }))}
+                  className="px-3 py-2 bg-input border border-border rounded-lg text-sm"
+                >
+                  <option value="">All Severities</option>
+                  <option value="Critical">Critical</option>
+                  <option value="High">High</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Low">Low</option>
+                </select>
+                
+                <select
+                  value={filter.subsystem || ''}
+                  onChange={(e) => setFilter(prev => ({ ...prev, subsystem: e.target.value || undefined }))}
+                  className="px-3 py-2 bg-input border border-border rounded-lg text-sm"
+                >
+                  <option value="">All Subsystems</option>
+                  <option value="Flight Control">Flight Control</option>
+                  <option value="Navigation">Navigation</option>
+                  <option value="Engine">Engine</option>
+                  <option value="Communication">Communication</option>
+                  <option value="Landing Gear">Landing Gear</option>
+                </select>
+                
+                <select
+                  value={filter.type || ''}
+                  onChange={(e) => setFilter(prev => ({ ...prev, type: e.target.value as any || undefined }))}
+                  className="px-3 py-2 bg-input border border-border rounded-lg text-sm"
+                >
+                  <option value="">All Types</option>
+                  <option value="Hardware">Hardware</option>
+                  <option value="Software">Software</option>
+                  <option value="Network">Network</option>
+                  <option value="Sensor">Sensor</option>
+                  <option value="Configuration">Configuration</option>
+                </select>
+              </div>
+            </div>
+            
+            <BugList bugs={bugs} onResolveBug={resolveBug} />
+          </div>
+        );
+      
       case 'alerts':
         return (
           <div className="space-y-6">
@@ -79,17 +155,6 @@ const Index = () => {
               <p className="text-muted-foreground">Real-time monitoring of aircraft system alerts and anomalies.</p>
             </div>
             <AlertsChart />
-          </div>
-        );
-      
-      case 'bugs':
-        return (
-          <div className="space-y-6">
-            <div className="aviation-card p-6">
-              <h3 className="text-xl font-semibold mb-4">Bug Report Tracking</h3>
-              <p className="text-muted-foreground">Comprehensive bug tracking and resolution management.</p>
-            </div>
-            <BugReportChart />
           </div>
         );
       
