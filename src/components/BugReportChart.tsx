@@ -1,15 +1,21 @@
 
 import React from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Area, AreaChart } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
 
 const BugReportChart: React.FC = () => {
-  // Generate more realistic trending data
+  // Generate more realistic trending data with live updates
   const generateRealisticTrendData = () => {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    const currentMonth = new Date().getMonth();
+    
     return months.map((month, index) => {
-      const baseResolved = 120 + (index * 25) + Math.floor(Math.random() * 20);
-      const baseCategorized = 60 + (index * 8) + Math.floor(Math.random() * 15);
-      const baseUncategorized = Math.max(5, 50 - (index * 5) + Math.floor(Math.random() * 10));
+      // Simulate improvement trends over time
+      const progressMultiplier = (index + 1) / months.length;
+      const timeVariation = Math.sin((Date.now() / 300000 + index) * 0.2) * 0.15 + 1;
+      
+      const baseResolved = Math.round((85 + (index * 18) + Math.random() * 12) * timeVariation);
+      const baseCategorized = Math.round((45 + (index * 8) - Math.random() * 8) * timeVariation);
+      const baseUncategorized = Math.max(3, Math.round((35 - (index * 4) + Math.random() * 6) * timeVariation));
       
       return {
         date: month,
@@ -22,6 +28,8 @@ const BugReportChart: React.FC = () => {
   };
 
   const data = generateRealisticTrendData();
+  const latestData = data[data.length - 1];
+  const previousData = data[data.length - 2];
 
   return (
     <div className="aviation-card p-6">
@@ -32,7 +40,7 @@ const BugReportChart: React.FC = () => {
         </div>
         <div className="flex items-center space-x-4 text-xs">
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-red-400 rounded-full"></div>
+            <div className="w-3 h-3 bg-red-400 rounded-full animate-pulse"></div>
             <span>Uncategorized</span>
           </div>
           <div className="flex items-center space-x-2">
@@ -58,32 +66,32 @@ const BugReportChart: React.FC = () => {
                 border: '1px solid #374151',
                 borderRadius: '8px'
               }}
-              formatter={(value, name) => [value, name.charAt(0).toUpperCase() + name.slice(1)]}
+              formatter={(value, name) => [value, String(name).charAt(0).toUpperCase() + String(name).slice(1)]}
             />
-            <Area type="monotone" dataKey="resolved" stackId="1" stroke="#10B981" fill="#10B981" fillOpacity={0.4} />
-            <Area type="monotone" dataKey="categorized" stackId="1" stroke="#EAB308" fill="#EAB308" fillOpacity={0.4} />
+            <Area type="monotone" dataKey="resolved" stackId="1" stroke="#10B981" fill="#10B981" fillOpacity={0.6} />
+            <Area type="monotone" dataKey="categorized" stackId="1" stroke="#EAB308" fill="#EAB308" fillOpacity={0.5} />
             <Area type="monotone" dataKey="uncategorized" stackId="1" stroke="#EF4444" fill="#EF4444" fillOpacity={0.4} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
       <div className="mt-4 grid grid-cols-3 gap-4">
-        <div className="text-center p-3 bg-green-500/10 rounded-lg">
-          <div className="text-xl font-bold text-green-400">{data[data.length - 1].resolved}</div>
+        <div className="text-center p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+          <div className="text-xl font-bold text-green-400">{latestData.resolved}</div>
           <div className="text-xs text-muted-foreground">Resolved This Month</div>
           <div className="text-xs text-green-400 mt-1">
-            +{data[data.length - 1].resolved - data[data.length - 2].resolved} from last month
+            +{latestData.resolved - previousData.resolved} from last month
           </div>
         </div>
-        <div className="text-center p-3 bg-yellow-500/10 rounded-lg">
-          <div className="text-xl font-bold text-yellow-400">{data[data.length - 1].categorized}</div>
+        <div className="text-center p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
+          <div className="text-xl font-bold text-yellow-400">{latestData.categorized}</div>
           <div className="text-xs text-muted-foreground">In Progress</div>
           <div className="text-xs text-yellow-400 mt-1">
             Processing queue
           </div>
         </div>
-        <div className="text-center p-3 bg-red-500/10 rounded-lg">
-          <div className="text-xl font-bold text-red-400">{data[data.length - 1].uncategorized}</div>
+        <div className="text-center p-3 bg-red-500/10 rounded-lg border border-red-500/20">
+          <div className="text-xl font-bold text-red-400">{latestData.uncategorized}</div>
           <div className="text-xs text-muted-foreground">Awaiting Review</div>
           <div className="text-xs text-red-400 mt-1">
             Requires attention
