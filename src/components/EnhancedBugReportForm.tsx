@@ -2,10 +2,14 @@
 import React, { useState } from 'react';
 import { Bug, AlertTriangle, User, Clock } from 'lucide-react';
 import { useAircraftManager } from '../hooks/useAircraftManager';
+import { useReportsManager } from '../hooks/useReportsManager';
+import { useToast } from '../hooks/use-toast';
 import { Textarea } from './ui/textarea';
 
 const EnhancedBugReportForm: React.FC = () => {
   const { aircraft, addBugReport } = useAircraftManager();
+  const { createReport } = useReportsManager();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     aircraftId: '',
     subsystem: '',
@@ -18,17 +22,46 @@ const EnhancedBugReportForm: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.aircraftId) {
-      alert('Please select an aircraft first');
+      toast({
+        title: "Error",
+        description: "Please select an aircraft first",
+        variant: "destructive"
+      });
       return;
     }
 
     const selectedAircraft = aircraft.find(a => a.id === formData.aircraftId);
-    if (!selectedAircraft) return;
+    if (!selectedAircraft) {
+      toast({
+        title: "Error",
+        description: "Selected aircraft not found",
+        variant: "destructive"
+      });
+      return;
+    }
 
+    // Add bug report to aircraft manager
     addBugReport({
       ...formData,
       location: selectedAircraft.location,
       airlineName: selectedAircraft.airlineName
+    });
+
+    // Create a report entry
+    createReport({
+      title: `${formData.subsystem} Issue - ${formData.severity}`,
+      content: `Aircraft: ${selectedAircraft.aircraftId} (${selectedAircraft.airlineName})\nSubsystem: ${formData.subsystem}\nDescription: ${formData.description}\nLocation: ${selectedAircraft.location}\nReported By: ${formData.reportedBy}\nType: ${formData.type}`,
+      aircraftId: formData.aircraftId,
+      status: 'draft',
+      type: 'bug',
+      severity: formData.severity.toLowerCase() as 'low' | 'medium' | 'high' | 'critical',
+      author: formData.reportedBy,
+      tags: [formData.subsystem, formData.severity, formData.type]
+    });
+
+    toast({
+      title: "Bug Report Submitted",
+      description: `Bug report for ${selectedAircraft.aircraftId} has been created and added to reports.`,
     });
 
     // Reset form
@@ -79,6 +112,11 @@ const EnhancedBugReportForm: React.FC = () => {
                 </option>
               ))}
             </select>
+            {aircraft.length === 0 && (
+              <p className="text-sm text-yellow-500 mt-1">
+                No aircraft registered yet. Please register an aircraft first.
+              </p>
+            )}
           </div>
 
           <div>

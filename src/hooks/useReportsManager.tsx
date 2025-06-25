@@ -11,7 +11,7 @@ export interface Report {
   createdAt: Date;
   updatedAt: Date;
   status: 'draft' | 'published' | 'archived';
-  type: 'bug' | 'maintenance' | 'inspection' | 'incident';
+  type: 'bug' | 'maintenance' | 'inspection' | 'incident' | 'registration';
   severity: 'low' | 'medium' | 'high' | 'critical';
   author: string;
   tags: string[];
@@ -54,11 +54,25 @@ export const useReportsManager = () => {
         tags: [alert.type, 'real-time']
       }));
 
-      setReports([...bugReports, ...alertReports]);
+      const registrationReports: Report[] = aircraft.map(plane => ({
+        id: `registration-${plane.id}`,
+        title: `Aircraft Registration - ${plane.aircraftId}`,
+        content: `Aircraft ID: ${plane.aircraftId}\nAirline: ${plane.airlineName}\nLocation: ${plane.location}\nRegistration Date: ${plane.dateTime.toLocaleString()}\nFlight Number: ${plane.flightNumber || 'N/A'}`,
+        aircraftId: plane.id,
+        createdAt: plane.dateTime,
+        updatedAt: plane.dateTime,
+        status: 'published',
+        type: 'registration',
+        severity: 'low',
+        author: 'System',
+        tags: ['registration', plane.airlineName]
+      }));
+
+      setReports([...bugReports, ...alertReports, ...registrationReports]);
     };
 
     generateInitialReports();
-  }, [bugs, alerts]);
+  }, [bugs, alerts, aircraft]);
 
   const createReport = (reportData: Omit<Report, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newReport: Report = {

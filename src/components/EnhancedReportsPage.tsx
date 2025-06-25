@@ -1,184 +1,52 @@
 
 import React, { useState } from 'react';
 import { FileText, Download, Filter, Calendar, Plane, Search, Edit, Save, X } from 'lucide-react';
+import { useReportsManager } from '../hooks/useReportsManager';
 import { useAircraftManager } from '../hooks/useAircraftManager';
-import { useRealTimeData } from '../hooks/useRealTimeData';
 
 const EnhancedReportsPage: React.FC = () => {
-  const { aircraft, bugs, getBugsByAircraft } = useAircraftManager();
-  const { alerts, flightData } = useRealTimeData();
+  const { reports, downloadReportPDF } = useReportsManager();
+  const { aircraft } = useAircraftManager();
   const [selectedAircraftId, setSelectedAircraftId] = useState<string>('');
-  const [dateFilter, setDateFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   const [severityFilter, setSeverityFilter] = useState('');
-  const [reportContent, setReportContent] = useState('');
-  const [isEditingReport, setIsEditingReport] = useState(false);
-  const [reportTitle, setReportTitle] = useState('Aircraft System Analysis Report');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredBugs = selectedAircraftId 
-    ? getBugsByAircraft(selectedAircraftId)
-    : bugs;
-
-  const finalFilteredBugs = filteredBugs.filter(bug => {
-    if (dateFilter && !bug.timestamp.toISOString().startsWith(dateFilter)) return false;
-    if (severityFilter && bug.severity !== severityFilter) return false;
+  const filteredReports = reports.filter(report => {
+    if (selectedAircraftId && report.aircraftId !== selectedAircraftId) return false;
+    if (typeFilter && report.type !== typeFilter) return false;
+    if (severityFilter && report.severity !== severityFilter) return false;
+    if (statusFilter && report.status !== statusFilter) return false;
+    if (searchTerm && !report.title.toLowerCase().includes(searchTerm.toLowerCase()) && 
+        !report.content.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     return true;
   });
 
-  const generateDetailedReport = () => {
-    const selectedAircraft = selectedAircraftId 
-      ? aircraft.find(a => a.id === selectedAircraftId)
-      : null;
-
-    const reportData = {
-      title: reportTitle,
-      generatedAt: new Date().toISOString(),
-      summary: {
-        totalAircraft: aircraft.length,
-        totalBugs: finalFilteredBugs.length,
-        criticalBugs: finalFilteredBugs.filter(b => b.severity === 'Critical').length,
-        resolvedBugs: finalFilteredBugs.filter(b => b.status === 'Resolved').length,
-        activeAlerts: alerts.length,
-        trackedFlights: flightData.length
-      },
-      aircraft: selectedAircraft || { aircraftId: 'All Aircraft', airlineName: 'Multiple Airlines' },
-      bugs: finalFilteredBugs.map(bug => ({
-        id: bug.id,
-        aircraftId: bug.aircraftId,
-        subsystem: bug.subsystem,
-        severity: bug.severity,
-        description: bug.description,
-        timestamp: bug.timestamp.toISOString(),
-        status: bug.status,
-        reportedBy: bug.reportedBy,
-        location: bug.location,
-        airlineName: bug.airlineName
-      })),
-      alerts: alerts.slice(0, 10).map(alert => ({
-        id: alert.id,
-        aircraftId: alert.aircraftId,
-        type: alert.type,
-        message: alert.message,
-        timestamp: alert.timestamp.toISOString(),
-        severity: alert.severity
-      })),
-      customContent: reportContent
-    };
-
-    return reportData;
+  const getAircraftName = (aircraftId: string) => {
+    const plane = aircraft.find(a => a.id === aircraftId);
+    return plane ? `${plane.aircraftId} - ${plane.airlineName}` : aircraftId;
   };
 
-  const downloadPDFReport = () => {
-    const reportData = generateDetailedReport();
-    const selectedAircraft = selectedAircraftId 
-      ? aircraft.find(a => a.id === selectedAircraftId)
-      : null;
-    
-    // Create HTML content for PDF
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>${reportData.title}</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
-          .header { border-bottom: 2px solid #007bff; padding-bottom: 20px; margin-bottom: 30px; }
-          .summary { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
-          .section { margin-bottom: 30px; }
-          .bug-item { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
-          .critical { border-left: 4px solid #dc3545; }
-          .high { border-left: 4px solid #fd7e14; }
-          .medium { border-left: 4px solid #ffc107; }
-          .low { border-left: 4px solid #28a745; }
-          .stats { display: flex; justify-content: space-around; text-align: center; }
-          .stat-item { padding: 10px; background: #e9ecef; border-radius: 5px; margin: 5px; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>${reportData.title}</h1>
-          <p>Generated: ${new Date(reportData.generatedAt).toLocaleString()}</p>
-          <p>Aircraft: ${reportData.aircraft.aircraftId} - ${reportData.aircraft.airlineName}</p>
-        </div>
-        
-        <div class="summary">
-          <h2>Executive Summary</h2>
-          <div class="stats">
-            <div class="stat-item">
-              <h3>${reportData.summary.totalAircraft}</h3>
-              <p>Total Aircraft</p>
-            </div>
-            <div class="stat-item">
-              <h3>${reportData.summary.totalBugs}</h3>
-              <p>Total Issues</p>
-            </div>
-            <div class="stat-item">
-              <h3>${reportData.summary.criticalBugs}</h3>
-              <p>Critical Issues</p>
-            </div>
-            <div class="stat-item">
-              <h3>${reportData.summary.resolvedBugs}</h3>
-              <p>Resolved Issues</p>
-            </div>
-          </div>
-        </div>
-
-        ${reportData.customContent ? `
-        <div class="section">
-          <h2>Analysis Notes</h2>
-          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
-            ${reportData.customContent.replace(/\n/g, '<br>')}
-          </div>
-        </div>
-        ` : ''}
-
-        <div class="section">
-          <h2>Issue Details</h2>
-          ${reportData.bugs.map(bug => `
-            <div class="bug-item ${bug.severity.toLowerCase()}">
-              <h4>${bug.subsystem} - ${bug.severity}</h4>
-              <p><strong>Aircraft:</strong> ${bug.aircraftId} (${bug.airlineName})</p>
-              <p><strong>Description:</strong> ${bug.description}</p>
-              <p><strong>Status:</strong> ${bug.status}</p>
-              <p><strong>Reported:</strong> ${new Date(bug.timestamp).toLocaleString()}</p>
-              <p><strong>Location:</strong> ${bug.location}</p>
-            </div>
-          `).join('')}
-        </div>
-
-        <div class="section">
-          <h2>Recent Alerts</h2>
-          ${reportData.alerts.map(alert => `
-            <div class="bug-item">
-              <h4>${alert.type.toUpperCase()} Alert</h4>
-              <p><strong>Aircraft:</strong> ${alert.aircraftId}</p>
-              <p><strong>Message:</strong> ${alert.message}</p>
-              <p><strong>Time:</strong> ${new Date(alert.timestamp).toLocaleString()}</p>
-            </div>
-          `).join('')}
-        </div>
-      </body>
-      </html>
-    `;
-
-    // Create blob and download
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${selectedAircraft?.aircraftId || 'All_Aircraft'}_Detailed_Report_${new Date().toISOString().split('T')[0]}.html`;
-    link.click();
-    
-    URL.revokeObjectURL(url);
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'text-red-500 bg-red-100 dark:bg-red-900/20';
+      case 'high': return 'text-orange-500 bg-orange-100 dark:bg-orange-900/20';
+      case 'medium': return 'text-yellow-500 bg-yellow-100 dark:bg-yellow-900/20';
+      case 'low': return 'text-green-500 bg-green-100 dark:bg-green-900/20';
+      default: return 'text-gray-500 bg-gray-100 dark:bg-gray-900/20';
+    }
   };
 
-  const saveReport = () => {
-    const reportData = generateDetailedReport();
-    localStorage.setItem('saved_aircraft_report', JSON.stringify({
-      ...reportData,
-      savedAt: new Date().toISOString()
-    }));
-    setIsEditingReport(false);
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'bug': return '🐛';
+      case 'registration': return '✈️';
+      case 'incident': return '⚠️';
+      case 'maintenance': return '🔧';
+      case 'inspection': return '🔍';
+      default: return '📄';
+    }
   };
 
   return (
@@ -190,68 +58,35 @@ const EnhancedReportsPage: React.FC = () => {
               <FileText className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="text-xl font-semibold">Enhanced Aircraft Reports</h3>
-              <p className="text-muted-foreground">Generate comprehensive analysis reports with custom content</p>
+              <h3 className="text-xl font-semibold">Aircraft Reports Dashboard</h3>
+              <p className="text-muted-foreground">View and manage all aircraft reports and documentation</p>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={() => setIsEditingReport(!isEditingReport)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-            >
-              {isEditingReport ? <X className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
-              <span>{isEditingReport ? 'Cancel' : 'Edit Report'}</span>
-            </button>
-            {isEditingReport && (
-              <button
-                onClick={saveReport}
-                className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-              >
-                <Save className="w-4 h-4" />
-                <span>Save Report</span>
-              </button>
-            )}
-            <button
-              onClick={downloadPDFReport}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              <span>Download Report</span>
-            </button>
+          <div className="text-sm text-muted-foreground">
+            Total Reports: {filteredReports.length}
           </div>
         </div>
 
-        {/* Report Editor */}
-        {isEditingReport && (
-          <div className="mb-6 p-4 bg-accent/20 rounded-lg border border-border">
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Report Title</label>
-              <input
-                type="text"
-                value={reportTitle}
-                onChange={(e) => setReportTitle(e.target.value)}
-                className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Custom Analysis & Notes</label>
-              <textarea
-                value={reportContent}
-                onChange={(e) => setReportContent(e.target.value)}
-                placeholder="Add your analysis, observations, recommendations, and conclusions here..."
-                rows={8}
-                className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-              />
-            </div>
+        {/* Search and Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              <Search className="w-4 h-4 inline mr-2" />
+              Search Reports
+            </label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by title or content..."
+              className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
           </div>
-        )}
 
-        {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div>
             <label className="block text-sm font-medium mb-2">
               <Plane className="w-4 h-4 inline mr-2" />
-              Select Aircraft
+              Aircraft
             </label>
             <select
               value={selectedAircraftId}
@@ -268,90 +103,143 @@ const EnhancedReportsPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
-              <Calendar className="w-4 h-4 inline mr-2" />
-              Date Filter
-            </label>
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
+            <label className="block text-sm font-medium mb-2">Type</label>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
               className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
+            >
+              <option value="">All Types</option>
+              <option value="bug">Bug Reports</option>
+              <option value="registration">Registration</option>
+              <option value="incident">Incidents</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="inspection">Inspections</option>
+            </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
-              <Filter className="w-4 h-4 inline mr-2" />
-              Severity Filter
-            </label>
+            <label className="block text-sm font-medium mb-2">Severity</label>
             <select
               value={severityFilter}
               onChange={(e) => setSeverityFilter(e.target.value)}
               className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
             >
               <option value="">All Severities</option>
-              <option value="Critical">Critical</option>
-              <option value="High">High</option>
-              <option value="Medium">Medium</option>
-              <option value="Low">Low</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Status</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+            >
+              <option value="">All Status</option>
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
             </select>
           </div>
         </div>
 
-        {/* Enhanced Summary Stats */}
+        {/* Summary Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
           <div className="bg-accent/20 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-blue-400">{finalFilteredBugs.length}</div>
-            <div className="text-sm text-muted-foreground">Total Issues</div>
+            <div className="text-2xl font-bold text-blue-400">{filteredReports.length}</div>
+            <div className="text-sm text-muted-foreground">Total Reports</div>
           </div>
           <div className="bg-accent/20 p-4 rounded-lg text-center">
             <div className="text-2xl font-bold text-red-400">
-              {finalFilteredBugs.filter(b => b.severity === 'Critical').length}
+              {filteredReports.filter(r => r.severity === 'critical').length}
             </div>
             <div className="text-sm text-muted-foreground">Critical</div>
           </div>
           <div className="bg-accent/20 p-4 rounded-lg text-center">
             <div className="text-2xl font-bold text-orange-400">
-              {finalFilteredBugs.filter(b => b.severity === 'High').length}
+              {filteredReports.filter(r => r.type === 'bug').length}
             </div>
-            <div className="text-sm text-muted-foreground">High Priority</div>
+            <div className="text-sm text-muted-foreground">Bug Reports</div>
           </div>
           <div className="bg-accent/20 p-4 rounded-lg text-center">
             <div className="text-2xl font-bold text-green-400">
-              {finalFilteredBugs.filter(b => b.status === 'Resolved').length}
+              {filteredReports.filter(r => r.type === 'registration').length}
             </div>
-            <div className="text-sm text-muted-foreground">Resolved</div>
+            <div className="text-sm text-muted-foreground">Registrations</div>
           </div>
           <div className="bg-accent/20 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-yellow-400">{alerts.length}</div>
-            <div className="text-sm text-muted-foreground">Active Alerts</div>
+            <div className="text-2xl font-bold text-purple-400">
+              {filteredReports.filter(r => r.type === 'incident').length}
+            </div>
+            <div className="text-sm text-muted-foreground">Incidents</div>
           </div>
         </div>
       </div>
 
-      {/* Real-time Preview */}
-      <div className="aviation-card p-6">
-        <h4 className="text-lg font-semibold mb-4">Report Preview</h4>
-        <div className="bg-accent/10 p-4 rounded-lg border border-border">
-          <h5 className="font-semibold text-lg mb-2">{reportTitle}</h5>
-          <p className="text-sm text-muted-foreground mb-4">
-            Generated: {new Date().toLocaleString()} | 
-            Aircraft: {selectedAircraftId ? aircraft.find(a => a.id === selectedAircraftId)?.aircraftId : 'All Aircraft'}
-          </p>
-          
-          {reportContent && (
-            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border-l-4 border-blue-400">
-              <p className="whitespace-pre-wrap">{reportContent}</p>
-            </div>
-          )}
-          
-          <div className="text-sm">
-            <p><strong>Issues Found:</strong> {finalFilteredBugs.length}</p>
-            <p><strong>Critical Issues:</strong> {finalFilteredBugs.filter(b => b.severity === 'Critical').length}</p>
-            <p><strong>Resolution Rate:</strong> {finalFilteredBugs.length > 0 ? Math.round((finalFilteredBugs.filter(b => b.status === 'Resolved').length / finalFilteredBugs.length) * 100) : 0}%</p>
+      {/* Reports List */}
+      <div className="space-y-4">
+        {filteredReports.length === 0 ? (
+          <div className="aviation-card p-8 text-center">
+            <p className="text-muted-foreground">No reports found matching your criteria.</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Try registering an aircraft or submitting a bug report to see entries here.
+            </p>
           </div>
-        </div>
+        ) : (
+          filteredReports.map(report => (
+            <div key={report.id} className="aviation-card p-6 hover:bg-accent/10 transition-colors">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start space-x-3">
+                  <div className="text-2xl">{getTypeIcon(report.type)}</div>
+                  <div>
+                    <h4 className="text-lg font-semibold">{report.title}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {getAircraftName(report.aircraftId)} • {report.author}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${getSeverityColor(report.severity)}`}>
+                    {report.severity.toUpperCase()}
+                  </span>
+                  <button
+                    onClick={() => downloadReportPDF(report)}
+                    className="flex items-center space-x-1 px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-sm transition-colors"
+                  >
+                    <Download className="w-3 h-3" />
+                    <span>PDF</span>
+                  </button>
+                </div>
+              </div>
+              
+              <div className="mb-4">
+                <p className="text-sm text-muted-foreground line-clamp-3">
+                  {report.content}
+                </p>
+              </div>
+              
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="flex items-center space-x-4">
+                  <span>Type: {report.type}</span>
+                  <span>Status: {report.status}</span>
+                  <span>Created: {report.createdAt.toLocaleDateString()}</span>
+                </div>
+                <div className="flex space-x-1">
+                  {report.tags.map(tag => (
+                    <span key={tag} className="px-2 py-1 bg-accent/50 rounded text-xs">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

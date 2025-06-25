@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import { Plane, MapPin, Calendar, Building2 } from 'lucide-react';
 import { useAircraftManager } from '../hooks/useAircraftManager';
+import { useReportsManager } from '../hooks/useReportsManager';
+import { useToast } from '../hooks/use-toast';
 
 interface AircraftEntryFormProps {
   onAircraftAdded?: (aircraftId: string) => void;
@@ -9,6 +11,8 @@ interface AircraftEntryFormProps {
 
 const AircraftEntryForm: React.FC<AircraftEntryFormProps> = ({ onAircraftAdded }) => {
   const { addAircraft } = useAircraftManager();
+  const { createReport } = useReportsManager();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     airlineName: '',
     aircraftId: '',
@@ -19,14 +23,33 @@ const AircraftEntryForm: React.FC<AircraftEntryFormProps> = ({ onAircraftAdded }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Add aircraft to the system
     const aircraftId = addAircraft({
       ...formData,
       dateTime: new Date(formData.dateTime)
     });
     
+    // Create a registration report
+    createReport({
+      title: `Aircraft Registration - ${formData.aircraftId}`,
+      content: `Aircraft ID: ${formData.aircraftId}\nAirline: ${formData.airlineName}\nLocation: ${formData.location}\nRegistration Date: ${new Date(formData.dateTime).toLocaleString()}\nFlight Number: ${formData.flightNumber || 'N/A'}`,
+      aircraftId: aircraftId,
+      status: 'published',
+      type: 'registration',
+      severity: 'low',
+      author: 'System',
+      tags: ['registration', formData.airlineName]
+    });
+    
     if (onAircraftAdded) {
       onAircraftAdded(aircraftId);
     }
+    
+    toast({
+      title: "Aircraft Registered Successfully",
+      description: `${formData.aircraftId} has been registered and added to reports.`,
+    });
     
     // Reset form
     setFormData({
