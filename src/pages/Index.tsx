@@ -13,44 +13,68 @@ import EnhancedBugReportForm from '../components/EnhancedBugReportForm';
 import ReportsPage from '../components/ReportsPage';
 import { useBugManager } from '../hooks/useBugManager';
 import { useAircraftManager } from '../hooks/useAircraftManager';
-import { Filter, Download, RefreshCw, Plus, Trash2 } from 'lucide-react';
+import { useRealTimeData } from '../hooks/useRealTimeData';
+import { Filter, Download, RefreshCw, Plus, Trash2, Wifi, WifiOff } from 'lucide-react';
 
 const Index = () => {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const { bugs, allBugs, filter, setFilter, addRandomBug, clearAllBugs, resolveBug } = useBugManager();
   const { aircraft, bugs: enhancedBugs } = useAircraftManager();
+  const { flightData, alerts, isLoading, lastUpdate, getActiveFlights, getCriticalAlerts, getRecentAlerts } = useRealTimeData();
 
   const renderMainContent = () => {
     switch (activeSection) {
       case 'dashboard':
         return (
           <div className="space-y-6">
+            {/* Real-time Status Indicator */}
+            <div className="flex items-center justify-between bg-accent/20 p-3 rounded-lg">
+              <div className="flex items-center space-x-2">
+                {isLoading ? (
+                  <WifiOff className="w-4 h-4 text-red-400" />
+                ) : (
+                  <Wifi className="w-4 h-4 text-green-400" />
+                )}
+                <span className="text-sm">
+                  {isLoading ? 'Connecting to live data...' : 'Live data active'}
+                </span>
+                {lastUpdate && (
+                  <span className="text-xs text-muted-foreground">
+                    Last update: {lastUpdate.toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {flightData.length} flights tracked
+              </div>
+            </div>
+
             {/* Metrics Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <MetricCard 
-                title="Active Alerts" 
-                value="1,247" 
-                change={12}
-                changeType="increase"
+                title="Live Flight Alerts" 
+                value={getRecentAlerts().length.toString()} 
+                change={Math.floor(Math.random() * 20) - 10}
+                changeType={Math.random() > 0.5 ? "increase" : "decrease"}
                 severity="high"
-                subtitle="24h period"
+                subtitle="Last 5 minutes"
               />
               <MetricCard 
                 title="Critical Issues" 
-                value={enhancedBugs.filter(b => b.severity === 'Critical' && b.status !== 'Resolved').length.toString()} 
-                change={-15}
+                value={getCriticalAlerts().length.toString()} 
+                change={-Math.floor(Math.random() * 5)}
                 changeType="decrease"
                 severity="critical"
-                subtitle={`Resolved: ${enhancedBugs.filter(b => b.severity === 'Critical' && b.status === 'Resolved').length}`}
+                subtitle={`Total alerts: ${alerts.length}`}
               />
               <MetricCard 
-                title="Registered Aircraft" 
-                value={aircraft.length.toString()} 
-                change={8}
+                title="Active Flights" 
+                value={getActiveFlights().length.toString()} 
+                change={Math.floor(Math.random() * 15)}
                 changeType="increase"
                 severity="low"
-                subtitle="Total registered"
+                subtitle="Currently airborne"
               />
               <MetricCard 
                 title="Bug Reports" 
