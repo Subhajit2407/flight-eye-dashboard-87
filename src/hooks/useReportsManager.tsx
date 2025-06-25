@@ -93,7 +93,7 @@ export const useReportsManager = () => {
   };
 
   const generatePDFContent = (report: Report) => {
-    const aircraft = aircraftId ? aircraft.find(a => a.id === report.aircraftId) : null;
+    const selectedAircraft = aircraft.find(a => a.id === report.aircraftId);
     
     return `
       <!DOCTYPE html>
@@ -115,7 +115,7 @@ export const useReportsManager = () => {
         </div>
         
         <div class="meta">
-          <p><strong>Aircraft:</strong> ${aircraft?.aircraftId || report.aircraftId}</p>
+          <p><strong>Aircraft:</strong> ${selectedAircraft?.aircraftId || report.aircraftId}</p>
           <p><strong>Type:</strong> ${report.type.toUpperCase()}</p>
           <p><strong>Severity:</strong> ${report.severity.toUpperCase()}</p>
           <p><strong>Status:</strong> ${report.status.toUpperCase()}</p>
