@@ -69,6 +69,9 @@ const EnhancedReportsPage: React.FC = () => {
 
   const downloadPDFReport = () => {
     const reportData = generateDetailedReport();
+    const selectedAircraft = selectedAircraftId 
+      ? aircraft.find(a => a.id === selectedAircraftId)
+      : null;
     
     // Create HTML content for PDF
     const htmlContent = `
