@@ -6,11 +6,14 @@ import AlertsChart from '../components/AlertsChart';
 import BugReportChart from '../components/BugReportChart';
 import CategoryBreakdown from '../components/CategoryBreakdown';
 import RealGlobalMap from '../components/RealGlobalMap';
+import InteractiveGlobalMap from '../components/InteractiveGlobalMap';
 import FilterPanel from '../components/FilterPanel';
 import BugList from '../components/BugList';
 import AircraftEntryForm from '../components/AircraftEntryForm';
 import EnhancedBugReportForm from '../components/EnhancedBugReportForm';
 import ReportsPage from '../components/ReportsPage';
+import LegacyBugPage from '../components/LegacyBugPage';
+import EnhancedReportsPage from '../components/EnhancedReportsPage';
 import { useBugManager } from '../hooks/useBugManager';
 import { useAircraftManager } from '../hooks/useAircraftManager';
 import { useRealTimeData } from '../hooks/useRealTimeData';
@@ -46,7 +49,7 @@ const Index = () => {
                 )}
               </div>
               <div className="text-xs text-muted-foreground">
-                {flightData.length} flights tracked
+                {flightData.length} flights tracked • {alerts.length} active alerts
               </div>
             </div>
 
@@ -96,7 +99,7 @@ const Index = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <CategoryBreakdown />
               <div className="lg:col-span-2">
-                <RealGlobalMap />
+                <InteractiveGlobalMap />
               </div>
             </div>
           </div>
@@ -117,80 +120,10 @@ const Index = () => {
         );
         
       case 'reports':
-        return <ReportsPage />;
+        return <EnhancedReportsPage />;
       
       case 'bugs':
-        return (
-          <div className="space-y-6">
-            <div className="aviation-card p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-xl font-semibold mb-2">Legacy Bug Report Management</h3>
-                  <p className="text-muted-foreground">Simple bug tracking and resolution management.</p>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <button
-                    onClick={addRandomBug}
-                    className="flex items-center space-x-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add Bug</span>
-                  </button>
-                  <button
-                    onClick={clearAllBugs}
-                    className="flex items-center space-x-2 px-4 py-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-lg transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span>Clear All</span>
-                  </button>
-                </div>
-              </div>
-              
-              {/* Filter Controls */}
-              <div className="flex flex-wrap gap-3 mb-6">
-                <select
-                  value={filter.severity || ''}
-                  onChange={(e) => setFilter(prev => ({ ...prev, severity: e.target.value as any || undefined }))}
-                  className="px-3 py-2 bg-input border border-border rounded-lg text-sm"
-                >
-                  <option value="">All Severities</option>
-                  <option value="Critical">Critical</option>
-                  <option value="High">High</option>
-                  <option value="Medium">Medium</option>
-                  <option value="Low">Low</option>
-                </select>
-                
-                <select
-                  value={filter.subsystem || ''}
-                  onChange={(e) => setFilter(prev => ({ ...prev, subsystem: e.target.value || undefined }))}
-                  className="px-3 py-2 bg-input border border-border rounded-lg text-sm"
-                >
-                  <option value="">All Subsystems</option>
-                  <option value="Flight Control">Flight Control</option>
-                  <option value="Navigation">Navigation</option>
-                  <option value="Engine">Engine</option>
-                  <option value="Communication">Communication</option>
-                  <option value="Landing Gear">Landing Gear</option>
-                </select>
-                
-                <select
-                  value={filter.type || ''}
-                  onChange={(e) => setFilter(prev => ({ ...prev, type: e.target.value as any || undefined }))}
-                  className="px-3 py-2 bg-input border border-border rounded-lg text-sm"
-                >
-                  <option value="">All Types</option>
-                  <option value="Hardware">Hardware</option>
-                  <option value="Software">Software</option>
-                  <option value="Network">Network</option>
-                  <option value="Sensor">Sensor</option>
-                  <option value="Configuration">Configuration</option>
-                </select>
-              </div>
-            </div>
-            
-            <BugList bugs={bugs} onResolveBug={resolveBug} />
-          </div>
-        );
+        return <LegacyBugPage />;
       
       case 'alerts':
         return (
@@ -207,10 +140,10 @@ const Index = () => {
         return (
           <div className="space-y-6">
             <div className="aviation-card p-6">
-              <h3 className="text-xl font-semibold mb-4">Live Global Flight Monitoring</h3>
-              <p className="text-muted-foreground">Real-time tracking of aircraft worldwide with live data from OpenSky Network.</p>
+              <h3 className="text-xl font-semibold mb-4">Interactive Global Flight Monitoring</h3>
+              <p className="text-muted-foreground">Real-time tracking with enhanced visualization, zoom, and pan capabilities.</p>
             </div>
-            <RealGlobalMap />
+            <InteractiveGlobalMap />
           </div>
         );
       
