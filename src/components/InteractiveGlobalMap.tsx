@@ -1,101 +1,47 @@
-
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { MapPin, Plane, Wifi, AlertTriangle, Clock, ZoomIn, ZoomOut, RotateCcw, Maximize2 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { MapPin, Plane, Wifi, AlertTriangle, Clock, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { useRealTimeData } from '../hooks/useRealTimeData';
 
 const InteractiveGlobalMap: React.FC = () => {
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [selectedFlight, setSelectedFlight] = useState<any>(null);
-  const [mapTransform, setMapTransform] = useState({ scale: 1, translateX: 0, translateY: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
+  const [flightPaths, setFlightPaths] = useState<Map<string, Array<{x: number, y: number, timestamp: number}>>>(new Map());
+  
   const { flightData, alerts, isLoading, lastUpdate } = useRealTimeData();
 
-  // Enhanced world map with more detail
-  const worldMapPaths = [
-    // North America
-    "M158,150 Q200,120 300,150 Q400,180 500,150 Q550,130 600,150 L580,200 Q520,230 450,200 Q350,230 250,200 Q200,180 158,200 Z",
-    // Europe
-    "M480,140 Q520,120 580,140 Q620,160 580,180 Q540,200 480,180 Q460,160 480,140 Z",
-    // Asia
-    "M580,140 Q650,120 750,140 Q800,160 750,200 Q700,220 650,200 Q580,180 580,140 Z",
-    // Africa
-    "M450,180 Q500,160 550,180 Q580,220 550,280 Q500,320 450,280 Q420,230 450,180 Z",
-    // South America
-    "M280,220 Q320,200 360,220 Q380,280 360,340 Q320,380 280,340 Q260,280 280,220 Z",
-    // Australia
-    "M700,280 Q750,260 800,280 Q820,300 800,320 Q750,340 700,320 Q680,300 700,280 Z"
-  ];
-
-  const handleZoom = useCallback((factor: number, centerX?: number, centerY?: number) => {
-    setMapTransform(prev => {
-      const newScale = Math.min(Math.max(prev.scale * factor, 0.5), 5);
-      
-      if (centerX !== undefined && centerY !== undefined) {
-        const deltaX = (centerX - prev.translateX) * (factor - 1);
-        const deltaY = (centerY - prev.translateY) * (factor - 1);
+  // Track flight paths for animation
+  useEffect(() => {
+    flightData.forEach(flight => {
+      const { x, y } = convertCoordToSVG(flight.latitude, flight.longitude);
+      setFlightPaths(prev => {
+        const newPaths = new Map(prev);
+        const currentPath = newPaths.get(flight.icao24) || [];
+        const newPoint = { x, y, timestamp: Date.now() };
         
-        return {
-          scale: newScale,
-          translateX: prev.translateX - deltaX,
-          translateY: prev.translateY - deltaY
-        };
-      }
-      
-      return { ...prev, scale: newScale };
+        // Keep only last 10 positions and remove old ones (older than 5 minutes)
+        const filteredPath = [...currentPath, newPoint]
+          .filter(point => Date.now() - point.timestamp < 300000)
+          .slice(-10);
+          
+        newPaths.set(flight.icao24, filteredPath);
+        return newPaths;
+      });
     });
-  }, []);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button === 0) { // Left mouse button
-      setIsDragging(true);
-      setDragStart({ x: e.clientX, y: e.clientY });
-    }
-  }, []);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (isDragging) {
-      const deltaX = e.clientX - dragStart.x;
-      const deltaY = e.clientY - dragStart.y;
-      
-      setMapTransform(prev => ({
-        ...prev,
-        translateX: prev.translateX + deltaX,
-        translateY: prev.translateY + deltaY
-      }));
-      
-      setDragStart({ x: e.clientX, y: e.clientY });
-    }
-  }, [isDragging, dragStart]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const rect = e.currentTarget.getBoundingClientRect();
-    const centerX = e.clientX - rect.left;
-    const centerY = e.clientY - rect.top;
-    const factor = e.deltaY > 0 ? 0.9 : 1.1;
-    handleZoom(factor, centerX, centerY);
-  }, [handleZoom]);
-
-  const resetView = () => {
-    setMapTransform({ scale: 1, translateX: 0, translateY: 0 });
-  };
+  }, [flightData]);
 
   const convertCoordToSVG = (lat: number, lon: number) => {
-    const x = ((lon + 180) / 360) * 1000;
-    const y = ((90 - lat) / 180) * 500;
+    const x = ((lon + 180) / 360) * 800;
+    const y = ((90 - lat) / 180) * 400;
     return { x, y };
   };
 
-  const getFlightIcon = (flight: any) => {
-    if (flight.on_ground) return '🛬';
-    if (flight.baro_altitude > 10000) return '✈️';
-    return '🛫';
+  const getFlightRotation = (flight: any) => {
+    return flight.true_track || 0;
   };
 
   const getAlertColor = (type: string) => {
@@ -107,19 +53,52 @@ const InteractiveGlobalMap: React.FC = () => {
     }
   };
 
-  const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen);
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setLastMousePos({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    
+    const deltaX = e.clientX - lastMousePos.x;
+    const deltaY = e.clientY - lastMousePos.y;
+    
+    setPan(prev => ({
+      x: prev.x + deltaX / zoom,
+      y: prev.y + deltaY / zoom
+    }));
+    
+    setLastMousePos({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleZoomIn = () => {
+    setZoom(prev => Math.min(prev * 1.5, 5));
+  };
+
+  const handleZoomOut = () => {
+    setZoom(prev => Math.max(prev / 1.5, 0.5));
+  };
+
+  const handleReset = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+    setSelectedFlight(null);
   };
 
   return (
-    <div className={`aviation-card p-6 ${isFullscreen ? 'fixed inset-0 z-50 m-4' : 'h-[700px]'}`}>
+    <div className="aviation-card p-6 h-[700px]">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
             <Plane className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="text-xl font-semibold">Interactive Global Flight Map</h3>
+            <h3 className="text-xl font-semibold">Enhanced Global Flight Tracking</h3>
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">
               <Wifi className={`w-4 h-4 ${isLoading ? 'text-red-400' : 'text-green-400'}`} />
               <span>{isLoading ? 'Connecting...' : 'Live Data'}</span>
@@ -135,32 +114,22 @@ const InteractiveGlobalMap: React.FC = () => {
         
         <div className="flex items-center space-x-2">
           <button
-            onClick={() => handleZoom(1.2)}
+            onClick={handleZoomIn}
             className="p-2 bg-accent hover:bg-accent/80 rounded-lg transition-colors"
-            title="Zoom In"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
-            onClick={() => handleZoom(0.8)}
+            onClick={handleZoomOut}
             className="p-2 bg-accent hover:bg-accent/80 rounded-lg transition-colors"
-            title="Zoom Out"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
           <button
-            onClick={resetView}
+            onClick={handleReset}
             className="p-2 bg-accent hover:bg-accent/80 rounded-lg transition-colors"
-            title="Reset View"
           >
             <RotateCcw className="w-4 h-4" />
-          </button>
-          <button
-            onClick={toggleFullscreen}
-            className="p-2 bg-accent hover:bg-accent/80 rounded-lg transition-colors"
-            title="Toggle Fullscreen"
-          >
-            <Maximize2 className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -168,7 +137,7 @@ const InteractiveGlobalMap: React.FC = () => {
       <div className="flex items-center justify-between mb-4 text-sm">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-1">
-            <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+            <div className="w-3 h-3 bg-green-400 rounded-full"></div>
             <span>{flightData.filter(f => !f.on_ground).length} Airborne</span>
           </div>
           <div className="flex items-center space-x-1">
@@ -177,194 +146,203 @@ const InteractiveGlobalMap: React.FC = () => {
           </div>
           <div className="flex items-center space-x-1">
             <AlertTriangle className="w-3 h-3 text-red-400" />
-            <span>{alerts.length} Active Alerts</span>
+            <span>{alerts.length} Alerts</span>
           </div>
         </div>
         <div className="text-muted-foreground">
-          Zoom: {Math.round(mapTransform.scale * 100)}% | Use mouse wheel to zoom, drag to pan
+          Zoom: {(zoom * 100).toFixed(0)}% | Pan: {pan.x.toFixed(0)}, {pan.y.toFixed(0)}
         </div>
       </div>
 
-      <div className="relative bg-slate-900 rounded-lg overflow-hidden flex-1 cursor-grab active:cursor-grabbing">
+      <div 
+        ref={containerRef}
+        className="relative bg-slate-900 rounded-lg overflow-hidden h-[550px] cursor-grab active:cursor-grabbing"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
         <svg
           ref={svgRef}
-          viewBox="0 0 1000 500"
+          viewBox="0 0 800 400"
           className="w-full h-full"
-          style={{ background: 'linear-gradient(to bottom, #1e293b, #0f172a)' }}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onWheel={handleWheel}
+          style={{ 
+            background: 'linear-gradient(to bottom, #1e293b, #0f172a)',
+            transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`,
+            transformOrigin: 'center'
+          }}
         >
-          <g transform={`translate(${mapTransform.translateX}, ${mapTransform.translateY}) scale(${mapTransform.scale})`}>
-            {/* Enhanced World Map */}
-            <g opacity="0.6">
-              {worldMapPaths.map((path, index) => (
+          {/* Enhanced World Map Background */}
+          <defs>
+            <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+              <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#475569" strokeWidth="0.5" opacity="0.3"/>
+            </pattern>
+          </defs>
+          
+          <rect width="800" height="400" fill="url(#grid)" />
+          
+          {/* Continents with more detail */}
+          <g opacity="0.7">
+            {/* North America */}
+            <path
+              d="M100,80 Q150,60 200,80 Q250,100 300,90 L320,110 Q280,140 240,150 Q180,160 120,140 Q80,120 100,80 Z"
+              fill="#334155"
+              stroke="#64748b"
+              strokeWidth="1"
+            />
+            {/* Europe */}
+            <path
+              d="M380,70 Q420,60 460,70 Q500,80 520,90 L520,120 Q480,130 440,125 Q400,120 380,110 Z"
+              fill="#334155"
+              stroke="#64748b"
+              strokeWidth="1"
+            />
+            {/* Asia */}
+            <path
+              d="M520,60 Q600,50 680,70 Q720,90 740,110 L740,180 Q700,200 650,190 Q580,180 520,160 Z"
+              fill="#334155"
+              stroke="#64748b"
+              strokeWidth="1"
+            />
+            {/* Africa */}
+            <path
+              d="M380,120 Q420,130 460,140 Q480,200 460,260 Q420,280 380,270 Q360,220 380,120 Z"
+              fill="#334155"
+              stroke="#64748b"
+              strokeWidth="1"
+            />
+            {/* South America */}
+            <path
+              d="M200,200 Q240,190 280,210 Q300,260 280,320 Q240,340 200,330 Q180,280 200,200 Z"
+              fill="#334155"
+              stroke="#64748b"
+              strokeWidth="1"
+            />
+            {/* Australia */}
+            <path
+              d="M600,280 Q650,270 700,280 Q720,300 700,320 Q650,330 600,320 Q580,310 600,280 Z"
+              fill="#334155"
+              stroke="#64748b"
+              strokeWidth="1"
+            />
+          </g>
+
+          {/* Flight Paths */}
+          {Array.from(flightPaths.entries()).map(([icao24, path]) => (
+            path.length > 1 && (
+              <g key={`path-${icao24}`}>
                 <path
-                  key={index}
-                  d={path}
-                  fill="#334155"
-                  stroke="#475569"
+                  d={`M ${path.map(p => `${p.x},${p.y}`).join(' L ')}`}
+                  fill="none"
+                  stroke="#10b981"
                   strokeWidth="1"
+                  opacity="0.6"
+                  strokeDasharray="2,2"
                 />
-              ))}
-            </g>
+              </g>
+            )
+          ))}
 
-            {/* Grid lines */}
-            <g opacity="0.3" stroke="#475569" strokeWidth="0.5">
-              {Array.from({ length: 21 }, (_, i) => (
-                <line
-                  key={`lat-${i}`}
-                  x1="0"
-                  y1={i * 25}
-                  x2="1000"
-                  y2={i * 25}
-                />
-              ))}
-              {Array.from({ length: 41 }, (_, i) => (
-                <line
-                  key={`lon-${i}`}
-                  x1={i * 25}
-                  y1="0"
-                  x2={i * 25}
-                  y2="500"
-                />
-              ))}
-            </g>
-
-            {/* Flight Paths */}
-            {flightData.slice(0, 20).map((flight, index) => {
-              const { x, y } = convertCoordToSVG(flight.latitude, flight.longitude);
-              const nextFlight = flightData[(index + 1) % flightData.length];
-              const { x: x2, y: y2 } = convertCoordToSVG(nextFlight.latitude, nextFlight.longitude);
-              
-              return (
-                <line
-                  key={`path-${flight.icao24}`}
-                  x1={x}
-                  y1={y}
-                  x2={x2}
-                  y2={y2}
-                  stroke="#3b82f6"
-                  strokeWidth="1"
-                  opacity="0.3"
-                  strokeDasharray="5,5"
-                >
-                  <animate
-                    attributeName="stroke-dashoffset"
-                    values="0;10"
-                    dur="2s"
-                    repeatCount="indefinite"
-                  />
-                </line>
-              );
-            })}
-
-            {/* Flight Markers */}
-            {flightData.map((flight, index) => {
-              const { x, y } = convertCoordToSVG(flight.latitude, flight.longitude);
-              const isSelected = selectedFlight?.icao24 === flight.icao24;
-              
-              return (
-                <g key={flight.icao24} className="cursor-pointer" onClick={() => setSelectedFlight(flight)}>
+          {/* Flight Markers */}
+          {flightData.map((flight, index) => {
+            const { x, y } = convertCoordToSVG(flight.latitude, flight.longitude);
+            const isSelected = selectedFlight?.icao24 === flight.icao24;
+            const rotation = getFlightRotation(flight);
+            
+            return (
+              <g key={flight.icao24} className="cursor-pointer">
+                {/* Flight marker */}
+                <g transform={`translate(${x},${y}) rotate(${rotation})`}>
                   <circle
-                    cx={x}
-                    cy={y}
-                    r={isSelected ? 12 : 6}
+                    r={isSelected ? 8 : 5}
                     fill={flight.on_ground ? '#3b82f6' : '#10b981'}
                     stroke={isSelected ? '#fbbf24' : 'white'}
-                    strokeWidth={isSelected ? 3 : 1.5}
+                    strokeWidth={isSelected ? 2 : 1}
                     className="transition-all duration-200"
-                  >
-                    <animate
-                      attributeName="r"
-                      values={`${isSelected ? 12 : 6};${isSelected ? 15 : 8};${isSelected ? 12 : 6}`}
-                      dur="2s"
-                      repeatCount="indefinite"
-                    />
-                  </circle>
+                    onClick={() => setSelectedFlight(selectedFlight?.icao24 === flight.icao24 ? null : flight)}
+                  />
                   
-                  {/* Flight direction indicator */}
-                  {flight.velocity > 0 && !flight.on_ground && (
-                    <line
-                      x1={x}
-                      y1={y}
-                      x2={x + Math.cos((flight.true_track || 0) * Math.PI / 180) * 20}
-                      y2={y + Math.sin((flight.true_track || 0) * Math.PI / 180) * 20}
-                      stroke="#10b981"
-                      strokeWidth="2"
-                      markerEnd="url(#arrowhead)"
+                  {/* Aircraft icon for airborne flights */}
+                  {!flight.on_ground && (
+                    <path
+                      d="M0,-8 L-3,-2 L-8,0 L-3,2 L0,8 L3,2 L8,0 L3,-2 Z"
+                      fill="white"
+                      stroke="none"
+                      fontSize="8"
+                      className="pointer-events-none"
                     />
                   )}
-                  
-                  {/* Flight callsign */}
+                </g>
+                
+                {/* Callsign label */}
+                {isSelected && (
                   <text
                     x={x}
-                    y={y - 20}
-                    textAnchor="middle"
-                    fill="white"
-                    fontSize="8"
-                    fontWeight="bold"
-                    opacity={isSelected ? 1 : 0.7}
-                  >
-                    {flight.callsign}
-                  </text>
-                </g>
-              );
-            })}
-
-            {/* Alert Markers */}
-            {alerts.slice(0, 15).map((alert, index) => {
-              const randomX = 100 + Math.random() * 800;
-              const randomY = 100 + Math.random() * 300;
-              
-              return (
-                <g key={alert.id}>
-                  <circle
-                    cx={randomX}
-                    cy={randomY}
-                    r="8"
-                    fill={getAlertColor(alert.type)}
-                    stroke="white"
-                    strokeWidth="2"
-                    className="animate-pulse"
-                  />
-                  <text
-                    x={randomX}
-                    y={randomY + 25}
+                    y={y - 15}
                     textAnchor="middle"
                     fill="white"
                     fontSize="10"
+                    fontWeight="bold"
+                    className="pointer-events-none"
                   >
-                    ⚠️
+                    {flight.callsign}
                   </text>
-                </g>
-              );
-            })}
+                )}
+                
+                {/* Velocity indicator */}
+                {!flight.on_ground && flight.velocity > 100 && (
+                  <circle
+                    cx={x}
+                    cy={y}
+                    r="12"
+                    fill="none"
+                    stroke="#10b981"
+                    strokeWidth="1"
+                    opacity="0.3"
+                    className="animate-ping"
+                  />
+                )}
+              </g>
+            );
+          })}
 
-            {/* Arrow marker definition */}
-            <defs>
-              <marker
-                id="arrowhead"
-                markerWidth="10"
-                markerHeight="7"
-                refX="9"
-                refY="3.5"
-                orient="auto"
-              >
-                <polygon
-                  points="0 0, 10 3.5, 0 7"
-                  fill="#10b981"
+          {/* Alert Markers */}
+          {alerts.slice(0, 15).map((alert, index) => {
+            // Distribute alerts across the map
+            const randomX = 100 + (index * 47) % 600;
+            const randomY = 100 + (index * 31) % 200;
+            
+            return (
+              <g key={alert.id}>
+                <circle
+                  cx={randomX}
+                  cy={randomY}
+                  r="8"
+                  fill={getAlertColor(alert.type)}
+                  stroke="white"
+                  strokeWidth="2"
+                  className="animate-pulse cursor-pointer"
+                  onClick={() => console.log('Alert clicked:', alert)}
                 />
-              </marker>
-            </defs>
-          </g>
+                <text
+                  x={randomX}
+                  y={randomY + 3}
+                  textAnchor="middle"
+                  fill="white"
+                  fontSize="10"
+                  fontWeight="bold"
+                  className="pointer-events-none"
+                >
+                  !
+                </text>
+              </g>
+            );
+          })}
         </svg>
 
         {/* Flight Details Panel */}
         {selectedFlight && (
-          <div className="absolute top-4 right-4 bg-background border border-border rounded-lg p-4 w-80 shadow-lg max-h-96 overflow-y-auto">
+          <div className="absolute top-4 right-4 bg-background border border-border rounded-lg p-4 w-72 shadow-lg max-h-80 overflow-y-auto">
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-semibold text-lg">{selectedFlight.callsign}</h4>
               <button
@@ -375,22 +353,38 @@ const InteractiveGlobalMap: React.FC = () => {
               </button>
             </div>
             <div className="space-y-2 text-sm">
-              <div className="grid grid-cols-2 gap-4">
-                <div><strong>Country:</strong> {selectedFlight.origin_country}</div>
-                <div><strong>ICAO24:</strong> {selectedFlight.icao24}</div>
-                <div><strong>Altitude:</strong> {selectedFlight.baro_altitude ? `${Math.round(selectedFlight.baro_altitude)} m` : 'N/A'}</div>
-                <div><strong>Speed:</strong> {selectedFlight.velocity ? `${Math.round(selectedFlight.velocity)} m/s` : 'N/A'}</div>
-                <div><strong>Track:</strong> {selectedFlight.true_track ? `${Math.round(selectedFlight.true_track)}°` : 'N/A'}</div>
-                <div><strong>V-Rate:</strong> {selectedFlight.vertical_rate ? `${selectedFlight.vertical_rate} m/s` : 'N/A'}</div>
-              </div>
-              <div className="pt-2 border-t border-border">
-                <div><strong>Status:</strong> 
-                  <span className={`ml-2 px-2 py-1 rounded text-xs ${selectedFlight.on_ground ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
-                    {selectedFlight.on_ground ? 'On Ground' : 'Airborne'}
-                  </span>
+              <div className="grid grid-cols-2 gap-2">
+                <div><strong>Country:</strong></div>
+                <div>{selectedFlight.origin_country}</div>
+                
+                <div><strong>Altitude:</strong></div>
+                <div>{selectedFlight.baro_altitude ? `${Math.round(selectedFlight.baro_altitude).toLocaleString()} m` : 'N/A'}</div>
+                
+                <div><strong>Speed:</strong></div>
+                <div>{selectedFlight.velocity ? `${Math.round(selectedFlight.velocity * 3.6)} km/h` : 'N/A'}</div>
+                
+                <div><strong>Heading:</strong></div>
+                <div>{selectedFlight.true_track ? `${Math.round(selectedFlight.true_track)}°` : 'N/A'}</div>
+                
+                <div><strong>Vertical Rate:</strong></div>
+                <div>{selectedFlight.vertical_rate ? `${selectedFlight.vertical_rate > 0 ? '+' : ''}${Math.round(selectedFlight.vertical_rate)} m/s` : 'N/A'}</div>
+                
+                <div><strong>Status:</strong></div>
+                <div className={`px-2 py-1 rounded text-xs ${selectedFlight.on_ground ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
+                  {selectedFlight.on_ground ? 'On Ground' : 'Airborne'}
                 </div>
-                <div className="mt-2"><strong>Last Contact:</strong> {new Date(selectedFlight.last_contact * 1000).toLocaleString()}</div>
-                <div><strong>Coordinates:</strong> {selectedFlight.latitude?.toFixed(4)}, {selectedFlight.longitude?.toFixed(4)}</div>
+              </div>
+              
+              <div className="pt-2 border-t border-border">
+                <div><strong>Last Contact:</strong></div>
+                <div>{new Date(selectedFlight.last_contact * 1000).toLocaleString()}</div>
+              </div>
+              
+              <div className="pt-2">
+                <div><strong>Coordinates:</strong></div>
+                <div className="font-mono text-xs">
+                  {selectedFlight.latitude.toFixed(4)}, {selectedFlight.longitude.toFixed(4)}
+                </div>
               </div>
             </div>
           </div>
@@ -400,12 +394,16 @@ const InteractiveGlobalMap: React.FC = () => {
         {isLoading && (
           <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-lg font-semibold">Loading live flight data...</p>
-              <p className="text-sm text-muted-foreground">Connecting to global aviation network</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+              <p className="text-sm text-muted-foreground">Loading flight data...</p>
             </div>
           </div>
         )}
+
+        {/* Map Controls */}
+        <div className="absolute bottom-4 left-4 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
+          Click and drag to pan • Use zoom controls • Click flights for details
+        </div>
       </div>
     </div>
   );

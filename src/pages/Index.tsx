@@ -14,6 +14,7 @@ import EnhancedBugReportForm from '../components/EnhancedBugReportForm';
 import ReportsPage from '../components/ReportsPage';
 import LegacyBugPage from '../components/LegacyBugPage';
 import EnhancedReportsPage from '../components/EnhancedReportsPage';
+import DashboardManagement from '../components/DashboardManagement';
 import { useBugManager } from '../hooks/useBugManager';
 import { useAircraftManager } from '../hooks/useAircraftManager';
 import { useRealTimeData } from '../hooks/useRealTimeData';
@@ -105,6 +106,9 @@ const Index = () => {
           </div>
         );
       
+      case 'management':
+        return <DashboardManagement />;
+        
       case 'aircraft-entry':
         return (
           <div className="space-y-6">
@@ -160,6 +164,7 @@ const Index = () => {
   const getSectionTitle = () => {
     switch (activeSection) {
       case 'dashboard': return 'System Overview';
+      case 'management': return 'Dashboard Management';
       case 'aircraft-entry': return 'Aircraft Registration';
       case 'bug-reporting': return 'Bug Reporting';
       case 'reports': return 'Reports & Analytics';
